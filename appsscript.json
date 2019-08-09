@@ -1,6 +1,18 @@
 {
   "timeZone": "America/New_York",
   "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Drive",
+        "serviceId": "drive",
+        "version": "v2"
+      },
+      {
+        "userSymbol": "Slides",
+        "serviceId": "slides",
+        "version": "v1"
+      }
+    ]
   },
   "exceptionLogging": "STACKDRIVER"
 }
