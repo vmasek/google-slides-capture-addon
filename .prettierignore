@@ -1,0 +1,6 @@
+package-lock.json
+dist
+*.log
+.prettierignore
+.claspignore
+.directory

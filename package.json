@@ -1,0 +1,27 @@
+{
+  "name": "google-slides-capture-addon",
+  "version": "0.0.1",
+  "scripts": {
+    "prettier": "prettier --write \"**/*.{json,html,css,ts}\"",
+    "pretty-quick": "pretty-quick",
+    "push": "clasp push",
+    "lint": "tslint --project tsconfig.json"
+  },
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {
+    "@types/google-apps-script": "0.0.55",
+    "husky": "^3.0.2",
+    "prettier": "^1.18.2",
+    "pretty-quick": "^1.11.1",
+    "tslint": "^5.18.0",
+    "tslint-immutable": "^6.0.1",
+    "typescript": "^3.5.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged",
+      "pre-push": "npm run lint"
+    }
+  }
+}
