@@ -1,5 +1,4 @@
 import Folder = GoogleAppsScript.Drive.Folder;
-import PlaceholderType = GoogleAppsScript.Slides.PlaceholderType;
 
 const MAIN_FOLDER = 'Captured slides';
 
@@ -16,7 +15,7 @@ function onInstall(): void {
 function onOpen(): void {
   SlidesApp.getUi()
     .createAddonMenu()
-    .addItem('Save thumbnail', saveThumbnailImages.name)
+    .addItem('Save thumbnails', saveThumbnailImages.name)
     .addToUi();
 }
 
@@ -34,37 +33,47 @@ function saveThumbnailImages(): void {
     getFolder(MAIN_FOLDER),
   );
 
-  Slides.Presentations.get(presentationId).slides.forEach(slide => {
-    slide.pageElements
-      .filter(
-        ({ shape }) =>
-          shape &&
-          shape.placeholder &&
-          // fixme: Placeholder type is string and not GoogleAppsScript.Slides.PlaceholderType (probably a docs error)
-          (shape.placeholder.type === 'TITLE' ||
-            shape.placeholder.type === 'CENTERED_TITLE'),
-      )
-      .forEach(({ shape }) => {
-        const texts = shape.text.textElements
-          .map(text => (text.textRun ? text.textRun.content : ''))
-          .join('');
-        console.log('texts', texts);
-      });
-  });
+  const slideTitles: { [key: string]: string } = Slides.Presentations!.get(
+    presentationId,
+  ).slides!.reduce<{}>(
+    (acc, slide) => ({
+      ...acc,
+      [slide.objectId!]: slide
+        .pageElements!.filter(
+          ({ shape }) =>
+            shape &&
+            shape.placeholder &&
+            // fixme: Placeholder type is string and not GoogleAppsScript.Slides.PlaceholderType (probably a docs error)
+            (shape.placeholder.type === 'TITLE' ||
+              shape.placeholder.type === 'CENTERED_TITLE'),
+        )
+        .map(({ shape }) =>
+          shape!
+            .text!.textElements!.map(({ textRun }) =>
+              textRun ? textRun.content : '',
+            )
+            .join(''),
+        )
+        .join(' '),
+    }),
+    {},
+  );
 
   const images = presentation.getSlides().map((slide, index) =>
     UrlFetchApp.fetch(
-      Slides.Presentations.Pages.getThumbnail(
+      Slides.Presentations!.Pages!.getThumbnail(
         presentationId,
         slide.getObjectId(),
         {
           // 'thumbnailProperties.mimeType': 'PNG',
           'thumbnailProperties.thumbnailSize': 'LARGE',
         },
-      ).contentUrl,
+      ).contentUrl!,
     )
       .getBlob()
-      .setName(`${presentationName}-slide-${index}`),
+      .setName(
+        `${presentationName}-${index}-${slideTitles[slide.getObjectId()]}`,
+      ),
   );
 
   images.forEach(image => folder.createFile(image));
