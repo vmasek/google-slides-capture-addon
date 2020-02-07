@@ -1,5 +1,5 @@
 {
-  "timeZone": "America/New_York",
+  "timeZone": "Europe/Vienna",
   "dependencies": {
     "enabledAdvancedServices": [
       {
@@ -14,5 +14,6 @@
       }
     ]
   },
+  "runtimeVersion": "V8",
   "exceptionLogging": "STACKDRIVER"
 }
