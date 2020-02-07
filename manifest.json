@@ -1,0 +1,9 @@
+{
+  "manifest_version": 2,
+  "name": "Capture slides",
+  "version": "0.2",
+  "api_console_project_id": "255833676727",
+  "default_locale": "en",
+  "description": "Capture high-res screens of all the pages of your presentation that have specified metadata. Each image will be named using the metadata of section and subsections.",
+  "author": "vojtech.masek@flowup.cz"
+}
