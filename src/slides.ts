@@ -2,27 +2,59 @@ import Folder = GoogleAppsScript.Drive.Folder;
 
 const MAIN_FOLDER = 'Captured slides';
 
+enum SlideType {
+  Section = 0,
+  SubSlide = 1,
+}
+
+/*
+
+operatorNameUID => <operatorImportPath>-<operatorName>
+slideType => ‘operatorName | operatorVersion’
+operatorImageFileName => <operatorNameUID>_<operatorVersionUID>
+
+slideType: 0 | 1 // 0 = operatorName, 1 = operatorVersion (gets exported)
+
+ */
+
+interface SlideSectionMetadata {
+  slideType: SlideType.Section;
+  operatorNameUID: string;
+}
+
+interface SlideSubSectionMetadata {
+  slideType: SlideType.SubSlide;
+  versionName?: string;
+}
+
+type SlideMetadata = SlideSectionMetadata | SlideSubSectionMetadata;
+
 /**
  * Runs when the add-on is installed.
  */
-function onInstall(): void {
+export function onInstall(): void {
   onOpen();
 }
 
 /**
  * Trigger for opening a presentation.
  */
-function onOpen(): void {
+export function onOpen(): void {
   SlidesApp.getUi()
     .createAddonMenu()
     .addItem('Save thumbnails', saveThumbnailImages.name)
     .addToUi();
 }
 
+interface SlideNames {
+  currentSectionMetadata: SlideSectionMetadata;
+  [custom: string]: string | SlideSectionMetadata;
+}
+
 /**
  * Saves a thumbnail images of the current Google Slide presentation in Google Drive folder.
  */
-function saveThumbnailImages(): void {
+export function saveThumbnailImages(): void {
   const presentation = SlidesApp.getActivePresentation();
   const presentationName = presentation.getName();
   const presentationId = presentation.getId();
@@ -33,48 +65,89 @@ function saveThumbnailImages(): void {
     getFolder(MAIN_FOLDER),
   );
 
-  const slideTitles: { [key: string]: string } = Slides.Presentations!.get(
-    presentationId,
-  ).slides!.reduce<{}>(
-    (acc, slide) => ({
-      ...acc,
-      [slide.objectId!]: slide
-        .pageElements!.filter(
-          ({ shape }) =>
-            shape &&
-            shape.placeholder &&
-            // fixme: Placeholder type is string and not GoogleAppsScript.Slides.PlaceholderType (probably a docs error)
-            (shape.placeholder.type === 'TITLE' ||
-              shape.placeholder.type === 'CENTERED_TITLE'),
+  const slideTitles = Slides.Presentations?.get(presentationId).slides?.reduce<
+    SlideNames
+  >(
+    (acc, slide, slideNumber): SlideNames => {
+      const slideMetadataString = slide.pageElements
+        ?.map(({ shape }) =>
+          shape?.text?.textElements
+            ?.map(({ textRun }) => (textRun ? textRun.content : ''))
+            .join('')
+            .trim(),
         )
-        .map(({ shape }) =>
-          shape!
-            .text!.textElements!.map(({ textRun }) =>
-              textRun ? textRun.content : '',
-            )
-            .join(''),
+        .filter(
+          (text): text is string =>
+            !!text && text.startsWith('{') && text.endsWith('}'),
         )
-        .join(' '),
-    }),
-    {},
+        .join('');
+
+      if (!slideMetadataString) {
+        return acc;
+      }
+
+      let slideMetadata: SlideMetadata;
+
+      try {
+        slideMetadata = JSON.parse(slideMetadataString);
+      } catch (e) {
+        console.error(
+          `Invalid metadata format at slide ${slideNumber + 1}\n`,
+          'Metadata should be in JSON format',
+          slideMetadataString,
+        );
+        return acc;
+      }
+
+      switch (slideMetadata.slideType) {
+        case SlideType.Section:
+          return {
+            ...acc,
+            currentSectionMetadata: slideMetadata,
+          };
+        case SlideType.SubSlide:
+          return {
+            ...acc,
+            // tslint:disable-next-line:no-non-null-assertion
+            [slide.objectId!]: `${acc.currentSectionMetadata.operatorNameUID}${
+              slideMetadata.versionName ? `_${slideMetadata.versionName}` : ''
+            }`,
+          };
+        default:
+          return acc;
+      }
+    },
+    {
+      currentSectionMetadata: {
+        slideType: SlideType.Section,
+        operatorNameUID: '',
+      },
+    },
   );
 
-  const images = presentation.getSlides().map((slide, index) =>
-    UrlFetchApp.fetch(
-      Slides.Presentations!.Pages!.getThumbnail(
-        presentationId,
-        slide.getObjectId(),
-        {
-          // 'thumbnailProperties.mimeType': 'PNG',
-          'thumbnailProperties.thumbnailSize': 'LARGE',
-        },
-      ).contentUrl!,
-    )
-      .getBlob()
-      .setName(
-        `${presentationName}-${index}-${slideTitles[slide.getObjectId()]}`,
-      ),
-  );
+  if (!slideTitles) {
+    return;
+  }
+
+  const images = presentation
+    .getSlides()
+    .filter(slide => slideTitles[slide.getObjectId()])
+    .reverse()
+    .map(slide =>
+      UrlFetchApp.fetch(
+        // tslint:disable-next-line:no-non-null-assertion
+        Slides.Presentations!.Pages!.getThumbnail(
+          presentationId,
+          slide.getObjectId(),
+          {
+            // 'thumbnailProperties.mimeType': 'PNG',
+            'thumbnailProperties.thumbnailSize': 'LARGE',
+          },
+        ).contentUrl!,
+      )
+        .getBlob()
+        .setName(`${slideTitles[slide.getObjectId()]}`),
+    );
 
   images.forEach(image => folder.createFile(image));
 }
