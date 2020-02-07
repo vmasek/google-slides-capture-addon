@@ -1,5 +1,6 @@
 package-lock.json
 dist
+*.js
 *.log
 .prettierignore
 .claspignore

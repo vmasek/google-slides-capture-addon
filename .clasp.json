@@ -1,4 +1,5 @@
 {
   "scriptId": "1j8-OUEXB4L6uthG0PM5pF9sNS58BT7PQkDYVQskJ1_9PoMEOMm2CugRC",
-  "fileExtension": "ts"
+  "fileExtension": "js",
+  "rootDir": "."
 }
