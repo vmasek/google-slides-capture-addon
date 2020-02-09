@@ -7,24 +7,14 @@ enum SlideType {
   SubSlide = 1,
 }
 
-/*
-
-operatorNameUID => <operatorImportPath>-<operatorName>
-slideType => ‘operatorName | operatorVersion’
-operatorImageFileName => <operatorNameUID>_<operatorVersionUID>
-
-slideType: 0 | 1 // 0 = operatorName, 1 = operatorVersion (gets exported)
-
- */
-
 interface SlideSectionMetadata {
-  slideType: SlideType.Section;
-  operatorNameUID: string;
+  type: SlideType.Section;
+  sectionName: string;
 }
 
 interface SlideSubSectionMetadata {
-  slideType: SlideType.SubSlide;
-  versionName?: string;
+  type: SlideType.SubSlide;
+  name?: string;
 }
 
 type SlideMetadata = SlideSectionMetadata | SlideSubSectionMetadata;
@@ -99,7 +89,7 @@ export function saveThumbnailImages(): void {
         return acc;
       }
 
-      switch (slideMetadata.slideType) {
+      switch (slideMetadata.type) {
         case SlideType.Section:
           return {
             ...acc,
@@ -109,8 +99,8 @@ export function saveThumbnailImages(): void {
           return {
             ...acc,
             // tslint:disable-next-line:no-non-null-assertion
-            [slide.objectId!]: `${acc.currentSectionMetadata.operatorNameUID}${
-              slideMetadata.versionName ? `_${slideMetadata.versionName}` : ''
+            [slide.objectId!]: `${acc.currentSectionMetadata.sectionName}${
+              slideMetadata.name ? `_${slideMetadata.name}` : ''
             }`,
           };
         default:
@@ -119,8 +109,8 @@ export function saveThumbnailImages(): void {
     },
     {
       currentSectionMetadata: {
-        slideType: SlideType.Section,
-        operatorNameUID: '',
+        type: SlideType.Section,
+        sectionName: '',
       },
     },
   );
