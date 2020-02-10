@@ -2,22 +2,15 @@ import Folder = GoogleAppsScript.Drive.Folder;
 
 const MAIN_FOLDER = 'Captured slides';
 
-enum SlideType {
+enum SlideLevel {
   Section = 0,
   SubSlide = 1,
 }
 
-interface SlideSectionMetadata {
-  type: SlideType.Section;
-  sectionName: string;
-}
-
-interface SlideSubSectionMetadata {
-  type: SlideType.SubSlide;
+interface SlideMetadata {
+  level: SlideLevel;
   name?: string;
 }
-
-type SlideMetadata = SlideSectionMetadata | SlideSubSectionMetadata;
 
 /**
  * Runs when the add-on is installed.
@@ -37,8 +30,8 @@ export function onOpen(): void {
 }
 
 interface SlideNames {
-  currentSectionMetadata: SlideSectionMetadata;
-  [custom: string]: string | SlideSectionMetadata;
+  currentSectionMetadata: SlideMetadata;
+  [custom: string]: string | SlideMetadata;
 }
 
 /**
@@ -89,17 +82,17 @@ export function saveThumbnailImages(): void {
         return acc;
       }
 
-      switch (slideMetadata.type) {
-        case SlideType.Section:
+      switch (slideMetadata.level) {
+        case SlideLevel.Section:
           return {
             ...acc,
             currentSectionMetadata: slideMetadata,
           };
-        case SlideType.SubSlide:
+        case SlideLevel.SubSlide:
           return {
             ...acc,
             // tslint:disable-next-line:no-non-null-assertion
-            [slide.objectId!]: `${acc.currentSectionMetadata.sectionName}${
+            [slide.objectId!]: `${acc.currentSectionMetadata.name}${
               slideMetadata.name ? `_${slideMetadata.name}` : ''
             }`,
           };
@@ -109,8 +102,8 @@ export function saveThumbnailImages(): void {
     },
     {
       currentSectionMetadata: {
-        type: SlideType.Section,
-        sectionName: '',
+        level: SlideLevel.Section,
+        name: '',
       },
     },
   );
